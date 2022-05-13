@@ -47,22 +47,22 @@ public class JobRegistryHelper {
 				new RejectedExecutionHandler() {
 					@Override
 					public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+
+						//线程再次执行？？？
 						r.run();
 						logger.warn(">>>>>>>>>>> xxl-job, registry or remove too fast, match threadpool rejected handler(run now).");
 					}
 				});
 
-		// for monitor
-		registryMonitorThread = new Thread(new Runnable() {
-			@Override
-			public void run() {
+		// 30秒执行一次,维护注册表信息， 判断在线超时时间90s
+		registryMonitorThread = new Thread(()-> {
 				while (!toStop) {
 					try {
 						// auto registry group
 						List<XxlJobGroup> groupList = XxlJobAdminConfig.getAdminConfig().getXxlJobGroupDao().findByAddressType(0);
 						if (groupList!=null && !groupList.isEmpty()) {
 
-							// remove dead address (admin/executor)
+							// 从注册表中删除超时的机器
 							List<Integer> ids = XxlJobAdminConfig.getAdminConfig().getXxlJobRegistryDao().findDead(RegistryConfig.DEAD_TIMEOUT, new Date());
 							if (ids!=null && ids.size()>0) {
 								XxlJobAdminConfig.getAdminConfig().getXxlJobRegistryDao().removeDead(ids);
@@ -121,7 +121,6 @@ public class JobRegistryHelper {
 					}
 				}
 				logger.info(">>>>>>>>>>> xxl-job, job registry monitor thread stop");
-			}
 		});
 		registryMonitorThread.setDaemon(true);
 		registryMonitorThread.setName("xxl-job, admin JobRegistryMonitorHelper-registryMonitorThread");
